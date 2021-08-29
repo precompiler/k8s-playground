@@ -1,0 +1,7 @@
+quarkus:
+  container-image:
+    insecure: true
+    registry: localhost:5000
+    group: precompiler
+    name: webhook-demo
+    tag: 1.0.0
