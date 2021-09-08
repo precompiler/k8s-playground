@@ -1,5 +1,7 @@
 package com.precompiler;
 
+
+import com.fasterxml.jackson.databind.JsonNode;
 import io.fabric8.kubernetes.api.model.admission.v1.AdmissionReview;
 import io.fabric8.kubernetes.api.model.admission.v1.AdmissionReviewBuilder;
 import lombok.extern.slf4j.Slf4j;
@@ -21,10 +23,14 @@ import javax.ws.rs.core.Response;
 public class WebhookResource {
     @Path("/validate")
     @POST
-    public Response validate(String payload) {
+    public Response validate(JsonNode payload) {
         log.info("validating request: {}", payload);
-
-        AdmissionReview response = new AdmissionReviewBuilder().withNewResponse().withAllowed(Boolean.TRUE).withUid("DummyUID").endResponse().build();
+        JsonNode uidNode = payload.at("/request/uid");
+        log.info("{}", uidNode);
+        if (uidNode.isMissingNode()) {
+            log.info("missing uid");
+        }
+        AdmissionReview response = new AdmissionReviewBuilder().withNewResponse().withAllowed(Boolean.TRUE).withUid(uidNode.asText()).endResponse().build();
         return Response.ok(response).build();
     }
 }
