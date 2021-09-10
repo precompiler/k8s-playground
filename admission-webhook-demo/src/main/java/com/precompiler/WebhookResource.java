@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.fabric8.kubernetes.api.model.Status;
 import io.fabric8.kubernetes.api.model.admission.v1.AdmissionReview;
 import io.fabric8.kubernetes.api.model.admission.v1.AdmissionReviewBuilder;
+
 import lombok.extern.slf4j.Slf4j;
 
 import javax.ws.rs.Consumes;
@@ -14,6 +15,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 /**
@@ -46,9 +48,34 @@ public class WebhookResource {
             Status status = new Status();
             status.setCode(400);
             status.setMessage(errors.toString());
+            status.setStatus("Failure");
             response = new AdmissionReviewBuilder().withNewResponse().withAllowed(Boolean.FALSE).withUid(uidNode.asText()).withStatus(status).endResponse().build();
         } else {
             response = new AdmissionReviewBuilder().withNewResponse().withAllowed(Boolean.TRUE).withUid(uidNode.asText()).endResponse().build();
+        }
+
+        return Response.ok(response).build();
+    }
+
+    @Path("/mutate")
+    @POST
+    public Response mutate(JsonNode payload) {
+        List<String> errors = new ArrayList<>();
+        log.info("mutating request: {}", payload);
+        JsonNode uidNode = payload.at("/request/uid");
+        if (uidNode.isMissingNode()) {
+            errors.add("Missing request UID");
+        }
+        String jsonPatch = "[{\"op\": \"add\", \"path\": \"/metadata/labels/customized-label\", \"value\": \"magic\"}]";
+        AdmissionReview response = null;
+        if (errors.size() > 0) {
+            Status status = new Status();
+            status.setCode(400);
+            status.setStatus("Failure");
+            status.setMessage(errors.toString());
+            response = new AdmissionReviewBuilder().withNewResponse().withAllowed(Boolean.FALSE).withUid(uidNode.asText()).withStatus(status).endResponse().build();
+        } else {
+            response = new AdmissionReviewBuilder().withNewResponse().withAllowed(Boolean.TRUE).withUid(uidNode.asText()).withPatchType("JSONPatch").withPatch(Base64.getEncoder().encodeToString(jsonPatch.getBytes())).endResponse().build();
         }
 
         return Response.ok(response).build();
