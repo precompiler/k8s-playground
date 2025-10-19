@@ -1,0 +1,5 @@
+apiVersion: "v2"
+name: "basics"
+version: "1.0.0"
+description: Generated chart for basics
+type: application
